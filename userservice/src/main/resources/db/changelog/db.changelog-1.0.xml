@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="create-users-table" author="Kirill">
+        <createTable tableName="users">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="surname" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="birth_date" type="TIMESTAMP"/>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="users"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="create-payment-cards-table" author="Kirill">
+        <createTable tableName="payment_cards">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_payment_cards_users"
+                             references="users(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="number" type="VARCHAR(19)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="holder" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expiration_date" type="DATE"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="payment_cards"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="add-indexes" author="Kirill">
+        <createIndex indexName="idx_users_email" tableName="users" unique="true">
+            <column name="email"/>
+        </createIndex>
+
+        <createIndex indexName="idx_users_name" tableName="users">
+            <column name="name"/>
+        </createIndex>
+
+        <createIndex indexName="idx_users_surname" tableName="users">
+            <column name="surname"/>
+        </createIndex>
+
+        <createIndex indexName="idx_users_name_surname" tableName="users">
+            <column name="name"/>
+            <column name="surname"/>
+        </createIndex>
+
+        <createIndex indexName="idx_users_active" tableName="users">
+            <column name="active"/>
+        </createIndex>
+
+        <createIndex indexName="idx_payment_cards_user_id" tableName="payment_cards">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_payment_cards_active" tableName="payment_cards">
+            <column name="active"/>
+        </createIndex>
+
+        <createIndex indexName="idx_payment_cards_holder" tableName="payment_cards">
+            <column name="holder"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex indexName="idx_payment_cards_user_id" tableName="payment_cards"/>
+            <dropIndex indexName="idx_users_email" tableName="users"/>
+            <dropIndex indexName="idx_users_name" tableName="users"/>
+            <dropIndex indexName="idx_users_surname" tableName="users"/>
+            <dropIndex indexName="idx_users_name_surname" tableName="users"/>
+            <dropIndex indexName="idx_users_active" tableName="users"/>
+            <dropIndex indexName="idx_payment_cards_active" tableName="payment_cards"/>
+            <dropIndex indexName="idx_payment_cards_holder" tableName="payment_cards"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
