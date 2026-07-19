@@ -4,6 +4,9 @@ import com.internship.userservice.dao.CardInfoDao;
 import com.internship.userservice.dao.UserDao;
 import com.internship.userservice.dto.CardInfoDTO;
 import com.internship.userservice.dto.CreateCardInfoDTO;
+import com.internship.userservice.exception.CardInfoNotFoundException;
+import com.internship.userservice.exception.CardLimitExceededException;
+import com.internship.userservice.exception.UserNotFoundException;
 import com.internship.userservice.mapper.CardInfoMapper;
 import com.internship.userservice.model.CardInfo;
 import com.internship.userservice.model.User;
@@ -40,9 +43,9 @@ public class CardInfoServiceImpl implements CardInfoService {
   @Transactional
   public CardInfoDTO createCard(CreateCardInfoDTO createCardInfoDTO) {
     User user = userDao.findById(createCardInfoDTO.getUserId())
-        .orElseThrow(RuntimeException::new);
+        .orElseThrow(()->new UserNotFoundException(createCardInfoDTO.getUserId()));
     if (cardInfoDao.countByUserId(user.getId()) >= MAX_CARDS_PER_USER) {
-      throw new RuntimeException();
+      throw new CardLimitExceededException(createCardInfoDTO.getUserId());
     }
     CardInfo entity = cardInfoMapper.toEntityForCreate(createCardInfoDTO);
     entity.setUser(user);
@@ -63,7 +66,7 @@ public class CardInfoServiceImpl implements CardInfoService {
   @Override
   public List<CardInfoDTO> getCardsByUserId(Long userId) {
     if (!userDao.existsById(userId)) {
-      throw new RuntimeException();
+      throw new UserNotFoundException(userId);
     }
     return cardInfoDao.findByUserIdJpql(userId).stream().map(cardInfoMapper::toDTO).toList();
   }
@@ -83,7 +86,7 @@ public class CardInfoServiceImpl implements CardInfoService {
   @Transactional
   public CardInfoDTO updateCard(Long id, CardInfoDTO updated) {
     CardInfo cardInfo = cardInfoDao.findById(id)
-        .orElseThrow(RuntimeException::new);
+        .orElseThrow(()->new CardInfoNotFoundException(id));
     cardInfo.setNumber(updated.getNumber());
     cardInfo.setHolder(updated.getHolder());
     cardInfo.setExpirationDate(updated.getExpirationDate());
@@ -97,7 +100,7 @@ public class CardInfoServiceImpl implements CardInfoService {
   @Transactional
   public CardInfoDTO activateCard(Long id) {
     CardInfo cardInfo = cardInfoDao.findById(id)
-        .orElseThrow(RuntimeException::new);
+        .orElseThrow(()->new CardInfoNotFoundException(id));
     cardInfo.setActive(true);
     return cardInfoMapper.toDTO(cardInfoDao.save(cardInfo));
   }
@@ -106,7 +109,7 @@ public class CardInfoServiceImpl implements CardInfoService {
   @Transactional
   public CardInfoDTO deactivateCard(Long id) {
     CardInfo cardInfo = cardInfoDao.findById(id)
-        .orElseThrow(RuntimeException::new);
+        .orElseThrow(()->new CardInfoNotFoundException(id));
     cardInfo.setActive(false);
     return cardInfoMapper.toDTO(cardInfoDao.save(cardInfo));
   }
@@ -115,7 +118,7 @@ public class CardInfoServiceImpl implements CardInfoService {
   @Transactional
   public void deleteCard(Long id) {
     CardInfo cardInfo = cardInfoDao.findById(id)
-        .orElseThrow(RuntimeException::new);
+        .orElseThrow(()->new CardInfoNotFoundException(id));
     cardInfoDao.deleteById(id);
   }
 }
