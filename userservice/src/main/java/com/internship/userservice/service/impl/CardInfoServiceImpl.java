@@ -28,19 +28,24 @@ import java.util.Optional;
 public class CardInfoServiceImpl implements CardInfoService {
 
   private static final int MAX_CARDS_PER_USER = 5;
+  private static final String USERS_CACHE = "users";
+
   private final CardInfoDao cardInfoDao;
   private final CardInfoMapper cardInfoMapper;
   private final UserDao userDao;
+  private final CacheManager cacheManager;
 
   public CardInfoServiceImpl(CardInfoDao cardInfoDao, CardInfoMapper cardInfoMapper,
-      UserDao userDao) {
+      UserDao userDao, CacheManager cacheManager) {
     this.cardInfoDao = cardInfoDao;
     this.cardInfoMapper = cardInfoMapper;
     this.userDao = userDao;
+    this.cacheManager = cacheManager;
   }
 
   @Override
   @Transactional
+  @CacheEvict(value = USERS_CACHE, key = "#createCardInfoDTO.userId")
   public CardInfoDTO createCard(CreateCardInfoDTO createCardInfoDTO) {
     User user = userDao.findById(createCardInfoDTO.getUserId())
         .orElseThrow(()->new UserNotFoundException(createCardInfoDTO.getUserId()));
@@ -84,6 +89,7 @@ public class CardInfoServiceImpl implements CardInfoService {
 
   @Override
   @Transactional
+  @CacheEvict(value = USERS_CACHE, key = "#result.userId", condition = "#result != null")
   public CardInfoDTO updateCard(Long id, CardInfoDTO updated) {
     CardInfo cardInfo = cardInfoDao.findById(id)
         .orElseThrow(()->new CardInfoNotFoundException(id));
@@ -98,6 +104,7 @@ public class CardInfoServiceImpl implements CardInfoService {
 
   @Override
   @Transactional
+  @CacheEvict(value = USERS_CACHE, key = "#result.userId", condition = "#result != null")
   public CardInfoDTO activateCard(Long id) {
     CardInfo cardInfo = cardInfoDao.findById(id)
         .orElseThrow(()->new CardInfoNotFoundException(id));
@@ -107,6 +114,7 @@ public class CardInfoServiceImpl implements CardInfoService {
 
   @Override
   @Transactional
+  @CacheEvict(value = USERS_CACHE, key = "#result.userId", condition = "#result != null")
   public CardInfoDTO deactivateCard(Long id) {
     CardInfo cardInfo = cardInfoDao.findById(id)
         .orElseThrow(()->new CardInfoNotFoundException(id));
@@ -119,6 +127,11 @@ public class CardInfoServiceImpl implements CardInfoService {
   public void deleteCard(Long id) {
     CardInfo cardInfo = cardInfoDao.findById(id)
         .orElseThrow(()->new CardInfoNotFoundException(id));
+    Long userId = cardInfo.getUser().getId();
     cardInfoDao.deleteById(id);
+    Cache cache = cacheManager.getCache(USERS_CACHE);
+    if (cache != null) {
+      cache.evict(userId);
+    }
   }
 }
