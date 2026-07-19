@@ -10,7 +10,12 @@ import com.internship.userservice.model.CardInfo;
 import com.internship.userservice.model.User;
 import com.internship.userservice.repository.specification.EntitySpecifications;
 import com.internship.userservice.service.UserService;
-import jakarta.validation.constraints.Email;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,12 +30,16 @@ public class UserServiceImpl implements UserService {
 
   private static final int MAX_CARDS_PER_USER = 5;
 
+  private static final String USERS_CACHE = "users";
+
   private final UserDao userDao;
   private final UserMapper userMapper;
+  private final CacheManager cacheManager;
 
-  public UserServiceImpl(UserDao userDao, UserMapper userMapper) {
+  public UserServiceImpl(UserDao userDao, UserMapper userMapper, CacheManager cacheManager) {
     this.userDao = userDao;
     this.userMapper = userMapper;
+    this.cacheManager = cacheManager;
   }
 
   @Override
@@ -59,11 +68,13 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
+  @Cacheable(value = USERS_CACHE, key = "#id")
   public Optional<UserDTO> getUserById(Long id) {
     return userDao.findByIdWithCards(id).map(userMapper::toDTO);
   }
 
   @Override
+  @Cacheable(value = USERS_CACHE, key = "'email:' + #email")
   public UserDTO getUserByEmail(String email) {
     User user = userDao.findByEmailJpql(email);
     if (user == null) {
@@ -96,8 +107,13 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional
+  @Caching(put = {
+          @CachePut(value = USERS_CACHE, key = "#id"),
+          @CachePut(value = USERS_CACHE, key = "'email:' + #result.email", condition = "#result != null")
+  })
   public UserDTO updateUser(Long id, UserDTO updated) {
     User existing = userDao.findById(id).orElseThrow(()->new UserNotFoundException(id));
+    String oldEmail = existing.getEmail();
     if (userDao.existsByEmailAndIdNot(updated.getEmail(), id)) {
       throw new EmailAlreadyExistsException(updated.getEmail());
     }
@@ -109,11 +125,16 @@ public class UserServiceImpl implements UserService {
       existing.setActive(updated.getActive());
     }
     UserDTO result = userMapper.toDTO(userDao.save(existing));
+    evictEmailCache(oldEmail);
     return result;
   }
 
   @Override
   @Transactional
+  @Caching(put = {
+          @CachePut(value = USERS_CACHE, key = "#id"),
+          @CachePut(value = USERS_CACHE, key = "'email:' + #result.email", condition = "#result != null")
+  })
   public UserDTO activateUser(Long id) {
     User user = userDao.findByIdWithCards(id).orElseThrow(() -> new UserNotFoundException(id));
     user.setActive(true);
@@ -122,6 +143,10 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional
+  @Caching(put = {
+          @CachePut(value = USERS_CACHE, key = "#id"),
+          @CachePut(value = USERS_CACHE, key = "'email:' + #result.email", condition = "#result != null")
+  })
   public UserDTO deactivateUser(Long id) {
     User user = userDao.findByIdWithCards(id).orElseThrow(() -> new UserNotFoundException(id));
     user.setActive(false);
@@ -130,10 +155,21 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional
+  @Caching(evict = {
+          @CacheEvict(value = USERS_CACHE, key = "#id"),
+          @CacheEvict(value = USERS_CACHE, key = "'email:' + #result.email", condition = "#result != null")
+  })
   public UserDTO deleteUser(Long id) {
     User user = userDao.findByIdWithCards(id).orElseThrow(() -> new UserNotFoundException(id));
     UserDTO userDTO = userMapper.toDTO(user);
     userDao.deleteById(id);
     return userDTO;
+  }
+
+  private void evictEmailCache(String email) {
+    Cache cache = cacheManager.getCache(USERS_CACHE);
+    if (cache != null && email != null) {
+      cache.evict("email:" + email);
+    }
   }
 }
