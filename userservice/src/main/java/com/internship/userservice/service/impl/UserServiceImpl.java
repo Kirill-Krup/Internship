@@ -2,11 +2,15 @@ package com.internship.userservice.service.impl;
 
 import com.internship.userservice.dao.UserDao;
 import com.internship.userservice.dto.UserDTO;
+import com.internship.userservice.exception.CardLimitExceededException;
+import com.internship.userservice.exception.EmailAlreadyExistsException;
+import com.internship.userservice.exception.UserNotFoundException;
 import com.internship.userservice.mapper.UserMapper;
 import com.internship.userservice.model.CardInfo;
 import com.internship.userservice.model.User;
 import com.internship.userservice.repository.specification.EntitySpecifications;
 import com.internship.userservice.service.UserService;
+import jakarta.validation.constraints.Email;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -33,7 +37,7 @@ public class UserServiceImpl implements UserService {
   @Transactional
   public UserDTO createUser(UserDTO userDTO) {
     if (userDao.existsByEmail(userDTO.getEmail())) {
-      throw new RuntimeException("Email already exists");
+      throw new EmailAlreadyExistsException(userDTO.getEmail());
     }
     User entity = userMapper.toEntity(userDTO);
     if (entity.getActive() == null) {
@@ -41,7 +45,7 @@ public class UserServiceImpl implements UserService {
     }
     if (entity.getCards() != null) {
       if (entity.getCards().size() > MAX_CARDS_PER_USER) {
-        throw new RuntimeException();
+        throw new CardLimitExceededException(entity.getId());
       }
       for (CardInfo card : entity.getCards()) {
         card.setUser(entity);
@@ -66,7 +70,7 @@ public class UserServiceImpl implements UserService {
       user = userDao.findByEmailNative(email);
     }
     if (user == null) {
-      throw new RuntimeException();
+      throw new UserNotFoundException(email);
     }
     return userMapper.toDTO(user);
   }
@@ -93,9 +97,9 @@ public class UserServiceImpl implements UserService {
   @Override
   @Transactional
   public UserDTO updateUser(Long id, UserDTO updated) {
-    User existing = userDao.findById(id).orElseThrow(RuntimeException::new);
+    User existing = userDao.findById(id).orElseThrow(()->new UserNotFoundException(id));
     if (userDao.existsByEmailAndIdNot(updated.getEmail(), id)) {
-      throw new RuntimeException("Email already exists");
+      throw new EmailAlreadyExistsException(updated.getEmail());
     }
     existing.setName(updated.getName());
     existing.setSurname(updated.getSurname());
@@ -111,7 +115,7 @@ public class UserServiceImpl implements UserService {
   @Override
   @Transactional
   public UserDTO activateUser(Long id) {
-    User user = userDao.findByIdWithCards(id).orElseThrow(RuntimeException::new);
+    User user = userDao.findByIdWithCards(id).orElseThrow(() -> new UserNotFoundException(id));
     user.setActive(true);
     return userMapper.toDTO(userDao.save(user));
   }
@@ -119,7 +123,7 @@ public class UserServiceImpl implements UserService {
   @Override
   @Transactional
   public UserDTO deactivateUser(Long id) {
-    User user = userDao.findByIdWithCards(id).orElseThrow(RuntimeException::new);
+    User user = userDao.findByIdWithCards(id).orElseThrow(() -> new UserNotFoundException(id));
     user.setActive(false);
     return userMapper.toDTO(userDao.save(user));
   }
@@ -127,7 +131,7 @@ public class UserServiceImpl implements UserService {
   @Override
   @Transactional
   public UserDTO deleteUser(Long id) {
-    User user = userDao.findByIdWithCards(id).orElseThrow(RuntimeException::new);
+    User user = userDao.findByIdWithCards(id).orElseThrow(() -> new UserNotFoundException(id));
     UserDTO userDTO = userMapper.toDTO(user);
     userDao.deleteById(id);
     return userDTO;
