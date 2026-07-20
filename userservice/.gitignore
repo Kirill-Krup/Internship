@@ -22,6 +22,7 @@ mvnw.cmd
 *.iml
 *.ipr
 .env
+.env.docker
 
 ### NetBeans ###
 /nbproject/private/
