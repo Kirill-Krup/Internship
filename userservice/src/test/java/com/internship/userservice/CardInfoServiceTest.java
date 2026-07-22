@@ -115,9 +115,16 @@ class CardInfoServiceTest {
     when(cardInfoDao.findById(10L)).thenReturn(Optional.of(card));
     when(cardInfoMapper.toDTO(card)).thenReturn(cardDTO);
 
-    Optional<CardInfoDTO> result = cardInfoService.getCardInfoById(10L);
+    CardInfoDTO result = cardInfoService.getCardInfoById(10L);
 
-    assertTrue(result.isPresent());
+    assertEquals(10L, result.getId());
+  }
+
+  @Test
+  @DisplayName("Get card by id - not found")
+  void testGetCardById_NotFound() {
+    when(cardInfoDao.findById(99L)).thenReturn(Optional.empty());
+    assertThrows(CardInfoNotFoundException.class, () -> cardInfoService.getCardInfoById(99L));
   }
 
   @Test
@@ -135,7 +142,7 @@ class CardInfoServiceTest {
   @DisplayName("Get cards by user id")
   void testGetCardsByUserId() {
     when(userDao.existsById(1L)).thenReturn(true);
-    when(cardInfoDao.findByUserIdJpql(1L)).thenReturn(List.of(card));
+    when(cardInfoDao.findByUserIdNative(1L)).thenReturn(List.of(card));
     when(cardInfoMapper.toDTO(card)).thenReturn(cardDTO);
 
     List<CardInfoDTO> result = cardInfoService.getCardsByUserId(1L);
@@ -173,10 +180,12 @@ class CardInfoServiceTest {
     when(cardInfoDao.findById(10L)).thenReturn(Optional.of(card));
     when(cardInfoDao.save(card)).thenReturn(card);
     when(cardInfoMapper.toDTO(card)).thenReturn(cardDTO);
+    when(cacheManager.getCache("users")).thenReturn(cache);
 
     CardInfoDTO result = cardInfoService.updateCard(10L, cardDTO);
 
     assertEquals("4111111111111111", result.getNumber());
+    verify(cache).evict(1L);
   }
 
   @Test
@@ -190,14 +199,16 @@ class CardInfoServiceTest {
   @Test
   @DisplayName("Activate card")
   void testActivateCard() {
+    card.setActive(true);
     when(cardInfoDao.findById(10L)).thenReturn(Optional.of(card));
-    when(cardInfoDao.save(card)).thenReturn(card);
     when(cardInfoMapper.toDTO(card)).thenReturn(cardDTO);
+    when(cacheManager.getCache("users")).thenReturn(cache);
 
     CardInfoDTO result = cardInfoService.activateCard(10L);
 
     assertTrue(result.getActive());
-    assertTrue(card.getActive());
+    verify(cardInfoDao).activateById(10L);
+    verify(cache).evict(1L);
   }
 
   @Test
@@ -205,14 +216,16 @@ class CardInfoServiceTest {
   void testDeactivateCard() {
     CardInfoDTO inactive = new CardInfoDTO(10L, "4111111111111111", "Alice Smith", expiration,
         false, 1L);
+    card.setActive(false);
     when(cardInfoDao.findById(10L)).thenReturn(Optional.of(card));
-    when(cardInfoDao.save(card)).thenReturn(card);
     when(cardInfoMapper.toDTO(card)).thenReturn(inactive);
+    when(cacheManager.getCache("users")).thenReturn(cache);
 
     CardInfoDTO result = cardInfoService.deactivateCard(10L);
 
     assertFalse(result.getActive());
-    assertFalse(card.getActive());
+    verify(cardInfoDao).deactivateById(10L);
+    verify(cache).evict(1L);
   }
 
   @Test

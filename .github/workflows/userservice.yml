@@ -22,9 +22,8 @@ jobs:
           cache: maven
 
       - name: Build project
-        run: |
-          cd userservice
-          mvn -B clean compile -DskipTests
+        working-directory: userservice
+        run: mvn -B clean compile -DskipTests
         env:
           SPRING_PROFILES_ACTIVE: local
           SPRING_DATASOURCE_DRIVER: ${{ secrets.SPRING_DATASOURCE_DRIVER }}
@@ -77,9 +76,8 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: |
-          cd userservice
-          mvn -B test
+        working-directory: userservice
+        run: mvn -B test
         env:
           SPRING_PROFILES_ACTIVE: local
           SPRING_DATASOURCE_DRIVER: ${{ secrets.SPRING_DATASOURCE_DRIVER }}
@@ -94,6 +92,9 @@ jobs:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
+      pull-requests: read
 
     steps:
       - name: Checkout source
@@ -109,14 +110,10 @@ jobs:
           cache: maven
 
       - name: SonarCloud Scan
-        run: |
-          cd userservice
-          mvn -B verify sonar:sonar \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+        working-directory: userservice
         env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SPRING_PROFILES_ACTIVE: local
           SPRING_DATASOURCE_DRIVER: ${{ secrets.SPRING_DATASOURCE_DRIVER }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
@@ -125,6 +122,11 @@ jobs:
           SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
           SPRING_DATA_REDIS_HOST: ${{ secrets.SPRING_DATA_REDIS_HOST_LOCAL }}
           SPRING_DATA_REDIS_PORT: ${{ secrets.SPRING_DATA_REDIS_PORT }}
+        run: |
+          mvn -B verify sonar:sonar \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
 
   docker:
     name: Build & Push Docker Image
@@ -144,9 +146,8 @@ jobs:
           cache: maven
 
       - name: Build JAR file
-        run: |
-          cd userservice
-          mvn -B clean package -DskipTests
+        working-directory: userservice
+        run: mvn -B clean package -DskipTests
         env:
           SPRING_PROFILES_ACTIVE: docker
           SPRING_DATASOURCE_DRIVER: ${{ secrets.SPRING_DATASOURCE_DRIVER }}
@@ -164,8 +165,8 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
+        working-directory: userservice
         run: |
-          cd userservice
           docker build -t ${{ secrets.DOCKER_USERNAME }}/userservice:${{ github.sha }} \
             --build-arg SPRING_PROFILES_ACTIVE=docker \
             --build-arg SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL_DOCKER }} \

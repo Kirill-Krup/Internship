@@ -3,6 +3,7 @@ package com.internship.userservice.repository;
 import com.internship.userservice.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -32,4 +33,12 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
   @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.cards WHERE u.id IN :ids")
   List<User> findUsersByIdIn(@Param("ids") List<Long> ids);
+
+  @Modifying(clearAutomatically = true)
+  @Query("UPDATE User u SET u.active = true WHERE u.id = :id")
+  void activateById(@Param("id") Long id);
+
+  @Modifying(clearAutomatically = true)
+  @Query("UPDATE User u SET u.active = false WHERE u.id = :id")
+  void deactivateById(@Param("id") Long id);
 }

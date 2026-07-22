@@ -69,4 +69,14 @@ public class CardInfoDaoImpl implements CardInfoDao {
   public void deleteById(Long id) {
     cardInfoRepository.deleteById(id);
   }
+
+  @Override
+  public void activateById(Long id) {
+    cardInfoRepository.activateById(id);
+  }
+
+  @Override
+  public void deactivateById(Long id) {
+    cardInfoRepository.deactivateById(id);
+  }
 }

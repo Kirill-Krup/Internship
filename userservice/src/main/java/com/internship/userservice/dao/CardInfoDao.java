@@ -29,4 +29,8 @@ public interface CardInfoDao {
   boolean existsById(Long id);
 
   void deleteById(Long id);
+
+  void activateById(Long id);
+
+  void deactivateById(Long id);
 }

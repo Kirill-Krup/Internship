@@ -94,18 +94,16 @@ class UserServiceTest {
     when(userDao.findByIdWithCards(1L)).thenReturn(Optional.of(user));
     when(userMapper.toDTO(user)).thenReturn(userDTO);
 
-    Optional<UserDTO> result = userService.getUserById(1L);
+    UserDTO result = userService.getUserById(1L);
 
-    assertTrue(result.isPresent());
-    assertEquals("test@example.com", result.get().getEmail());
+    assertEquals("test@example.com", result.getEmail());
   }
 
   @Test
   @DisplayName("Get user by ID - not found")
   void testGetUserById_NotFound() {
     when(userDao.findByIdWithCards(2L)).thenReturn(Optional.empty());
-    Optional<UserDTO> result = userService.getUserById(2L);
-    assertFalse(result.isPresent());
+    assertThrows(UserNotFoundException.class, () -> userService.getUserById(2L));
   }
 
   @Test
@@ -174,7 +172,8 @@ class UserServiceTest {
     UserDTO result = userService.updateUser(1L, updatedDTO);
 
     assertEquals("AliceUpdated", result.getName());
-    verify(userDao).save(any(User.class));
+    verify(userMapper).updateEntityFromDto(updatedDTO, user);
+    verify(userDao).save(user);
   }
 
   @Test
@@ -187,14 +186,15 @@ class UserServiceTest {
   @Test
   @DisplayName("Activate user")
   void testActivateUser() {
+    user.setActive(true);
+    when(userDao.existsById(1L)).thenReturn(true);
     when(userDao.findByIdWithCards(1L)).thenReturn(Optional.of(user));
-    when(userDao.save(user)).thenReturn(user);
     when(userMapper.toDTO(user)).thenReturn(userDTO);
 
     UserDTO result = userService.activateUser(1L);
 
     assertTrue(result.getActive());
-    assertTrue(user.getActive());
+    verify(userDao).activateById(1L);
   }
 
   @Test
@@ -202,14 +202,15 @@ class UserServiceTest {
   void testDeactivateUser() {
     UserDTO inactive = new UserDTO(1L, "Alice", "Smith", pastBirthday, "test@example.com", false,
         null);
+    user.setActive(false);
+    when(userDao.existsById(1L)).thenReturn(true);
     when(userDao.findByIdWithCards(1L)).thenReturn(Optional.of(user));
-    when(userDao.save(user)).thenReturn(user);
     when(userMapper.toDTO(user)).thenReturn(inactive);
 
     UserDTO result = userService.deactivateUser(1L);
 
     assertFalse(result.getActive());
-    assertFalse(user.getActive());
+    verify(userDao).deactivateById(1L);
   }
 
   @Test

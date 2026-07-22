@@ -74,4 +74,14 @@ public class UserDaoImpl implements UserDao {
   public void deleteById(Long id) {
     userRepository.deleteById(id);
   }
+
+  @Override
+  public void activateById(Long id) {
+    userRepository.activateById(id);
+  }
+
+  @Override
+  public void deactivateById(Long id) {
+    userRepository.deactivateById(id);
+  }
 }
