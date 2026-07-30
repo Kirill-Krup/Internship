@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class CardInfoController {
   }
 
   @PostMapping
+  @PreAuthorize("hasRole('ADMIN') or #createCardInfoDTO.userId == authentication.principal.userId")
   public ResponseEntity<CardInfoDTO> createCard(
       @Valid @RequestBody CreateCardInfoDTO createCardInfoDTO) {
     CardInfoDTO createdCard = cardInfoService.createCard(createCardInfoDTO);
@@ -31,6 +33,7 @@ public class CardInfoController {
   }
 
   @GetMapping
+  @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<Page<CardInfoDTO>> getAllCards(
       @RequestParam(required = false) String name,
       @RequestParam(required = false) String surname,
@@ -39,37 +42,44 @@ public class CardInfoController {
   }
 
   @GetMapping("/ids")
+  @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<List<CardInfoDTO>> getCardsByIds(@RequestParam List<Long> ids) {
     return ResponseEntity.ok(cardInfoService.getCardsByIds(ids));
   }
 
   @GetMapping("/user/{userId}")
+  @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
   public ResponseEntity<List<CardInfoDTO>> getCardsByUserId(@PathVariable Long userId) {
     return ResponseEntity.ok(cardInfoService.getCardsByUserId(userId));
   }
 
   @GetMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN') or @cardSecurity.isCardOwner(#id, authentication.principal.userId)")
   public ResponseEntity<CardInfoDTO> getCardById(@PathVariable Long id) {
     return ResponseEntity.ok(cardInfoService.getCardInfoById(id));
   }
 
   @PutMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN') or @cardSecurity.isCardOwner(#id, authentication.principal.userId)")
   public ResponseEntity<CardInfoDTO> updateCard(@PathVariable Long id,
       @Valid @RequestBody CardInfoDTO cardInfoDTO) {
     return ResponseEntity.ok(cardInfoService.updateCard(id, cardInfoDTO));
   }
 
   @PutMapping("/{id}/activate")
+  @PreAuthorize("hasRole('ADMIN') or @cardSecurity.isCardOwner(#id, authentication.principal.userId)")
   public ResponseEntity<CardInfoDTO> activateCard(@PathVariable Long id) {
     return ResponseEntity.ok(cardInfoService.activateCard(id));
   }
 
   @PutMapping("/{id}/deactivate")
+  @PreAuthorize("hasRole('ADMIN') or @cardSecurity.isCardOwner(#id, authentication.principal.userId)")
   public ResponseEntity<CardInfoDTO> deactivateCard(@PathVariable Long id) {
     return ResponseEntity.ok(cardInfoService.deactivateCard(id));
   }
 
   @DeleteMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN') or @cardSecurity.isCardOwner(#id, authentication.principal.userId)")
   public ResponseEntity<Void> deleteCard(@PathVariable Long id) {
     cardInfoService.deleteCard(id);
     return ResponseEntity.noContent().build();
