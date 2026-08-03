@@ -5,15 +5,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface UserService {
 
   UserDTO createUser(UserDTO userDTO);
 
-  Optional<UserDTO> getUserById(Long id);
+  UserDTO getUserById(Long id);
 
   UserDTO getUserByEmail(String email);
+
+  Long getUserIdByEmail(String email);
 
   List<UserDTO> getUsersByIds(List<Long> ids);
 

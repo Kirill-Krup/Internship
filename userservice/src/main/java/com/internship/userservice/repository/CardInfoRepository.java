@@ -3,6 +3,7 @@ package com.internship.userservice.repository;
 import com.internship.userservice.model.CardInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -24,4 +25,12 @@ public interface CardInfoRepository extends JpaRepository<CardInfo, Long>,
 
   @Query(value = "SELECT * FROM payment_cards WHERE user_id = :userId", nativeQuery = true)
   List<CardInfo> findCardsByUserIdNative(@Param("userId") Long userId);
+
+  @Modifying(clearAutomatically = true)
+  @Query("UPDATE CardInfo c SET c.active = true WHERE c.id = :id")
+  void activateById(@Param("id") Long id);
+
+  @Modifying(clearAutomatically = true)
+  @Query("UPDATE CardInfo c SET c.active = false WHERE c.id = :id")
+  void deactivateById(@Param("id") Long id);
 }

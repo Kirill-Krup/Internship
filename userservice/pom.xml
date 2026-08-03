@@ -23,6 +23,9 @@
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
         <jjwt.version>0.11.5</jjwt.version>
         <env-version>2.5.4</env-version>
+        <jacoco.version>0.8.12</jacoco.version>
+        <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.coverage.exclusions>**/model/*.java,**/config/*.java,**/dto/*.java,**/exception/*.java,**/mapper/*.java</sonar.coverage.exclusions>
     </properties>
 
     <dependencies>
@@ -178,6 +181,26 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>

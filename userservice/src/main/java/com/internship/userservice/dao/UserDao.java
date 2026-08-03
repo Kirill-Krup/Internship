@@ -31,4 +31,8 @@ public interface UserDao {
   boolean existsByEmailAndIdNot(String email, Long id);
 
   void deleteById(Long id);
+
+  void activateById(Long id);
+
+  void deactivateById(Long id);
 }

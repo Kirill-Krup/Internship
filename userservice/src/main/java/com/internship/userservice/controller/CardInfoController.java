@@ -50,9 +50,7 @@ public class CardInfoController {
 
   @GetMapping("/{id}")
   public ResponseEntity<CardInfoDTO> getCardById(@PathVariable Long id) {
-    return cardInfoService.getCardInfoById(id)
-        .map(ResponseEntity::ok)
-        .orElse(ResponseEntity.notFound().build());
+    return ResponseEntity.ok(cardInfoService.getCardInfoById(id));
   }
 
   @PutMapping("/{id}")

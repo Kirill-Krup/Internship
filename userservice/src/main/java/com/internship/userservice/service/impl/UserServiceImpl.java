@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -35,6 +34,7 @@ public class UserServiceImpl implements UserService {
   private final UserDao userDao;
   private final UserMapper userMapper;
   private final CacheManager cacheManager;
+
 
   public UserServiceImpl(UserDao userDao, UserMapper userMapper, CacheManager cacheManager) {
     this.userDao = userDao;
@@ -69,13 +69,26 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Cacheable(value = USERS_CACHE, key = "#id")
-  public Optional<UserDTO> getUserById(Long id) {
-    return userDao.findByIdWithCards(id).map(userMapper::toDTO);
+  @Transactional(readOnly = true)
+  public UserDTO getUserById(Long id) {
+    return userDao.findByIdWithCards(id)
+        .map(userMapper::toDTO)
+        .orElseThrow(() -> new UserNotFoundException(id));
   }
 
   @Override
   @Cacheable(value = USERS_CACHE, key = "'email:' + #email")
+  @Transactional(readOnly = true)
   public UserDTO getUserByEmail(String email) {
+    return userMapper.toDTO(findUserByEmail(email));
+  }
+
+  @Override
+  public Long getUserIdByEmail(String email) {
+    return findUserByEmail(email).getId();
+  }
+
+  private User findUserByEmail(String email) {
     User user = userDao.findByEmailJpql(email);
     if (user == null) {
       user = userDao.findByEmailNative(email);
@@ -83,10 +96,11 @@ public class UserServiceImpl implements UserService {
     if (user == null) {
       throw new UserNotFoundException(email);
     }
-    return userMapper.toDTO(user);
+    return user;
   }
 
   @Override
+  @Transactional(readOnly = true)
   public List<UserDTO> getUsersByIds(List<Long> ids) {
     return userDao.findByIds(ids).stream().map(userMapper::toDTO).toList();
   }
@@ -117,13 +131,7 @@ public class UserServiceImpl implements UserService {
     if (userDao.existsByEmailAndIdNot(updated.getEmail(), id)) {
       throw new EmailAlreadyExistsException(updated.getEmail());
     }
-    existing.setName(updated.getName());
-    existing.setSurname(updated.getSurname());
-    existing.setBirthDate(updated.getBirthDate());
-    existing.setEmail(updated.getEmail());
-    if (updated.getActive() != null) {
-      existing.setActive(updated.getActive());
-    }
+    userMapper.updateEntityFromDto(updated, existing);
     UserDTO result = userMapper.toDTO(userDao.save(existing));
     evictEmailCache(oldEmail);
     return result;
@@ -136,9 +144,12 @@ public class UserServiceImpl implements UserService {
           @CachePut(value = USERS_CACHE, key = "'email:' + #result.email", condition = "#result != null")
   })
   public UserDTO activateUser(Long id) {
+    if (!userDao.existsById(id)) {
+      throw new UserNotFoundException(id);
+    }
+    userDao.activateById(id);
     User user = userDao.findByIdWithCards(id).orElseThrow(() -> new UserNotFoundException(id));
-    user.setActive(true);
-    return userMapper.toDTO(userDao.save(user));
+    return userMapper.toDTO(user);
   }
 
   @Override
@@ -148,9 +159,12 @@ public class UserServiceImpl implements UserService {
           @CachePut(value = USERS_CACHE, key = "'email:' + #result.email", condition = "#result != null")
   })
   public UserDTO deactivateUser(Long id) {
+    if (!userDao.existsById(id)) {
+      throw new UserNotFoundException(id);
+    }
+    userDao.deactivateById(id);
     User user = userDao.findByIdWithCards(id).orElseThrow(() -> new UserNotFoundException(id));
-    user.setActive(false);
-    return userMapper.toDTO(userDao.save(user));
+    return userMapper.toDTO(user);
   }
 
   @Override

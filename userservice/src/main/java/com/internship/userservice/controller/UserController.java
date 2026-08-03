@@ -49,15 +49,12 @@ public class UserController {
 
   @GetMapping("/get-id-by-email/{email}")
   public ResponseEntity<Long> getUserIdByEmail(@PathVariable String email) {
-    Long userId = userService.getUserByEmail(email).getId();
-    return ResponseEntity.ok(userId);
+    return ResponseEntity.ok(userService.getUserIdByEmail(email));
   }
 
   @GetMapping("/{id}")
   public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
-    return userService.getUserById(id)
-        .map(ResponseEntity::ok)
-        .orElse(ResponseEntity.notFound().build());
+    return ResponseEntity.ok(userService.getUserById(id));
   }
 
   @PutMapping("/{id}")

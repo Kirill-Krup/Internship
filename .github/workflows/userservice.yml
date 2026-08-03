@@ -1,0 +1,183 @@
+name: CI/CD for UserService with Sonar & Docker
+
+on:
+  push:
+    branches: [ "master", "dev", "feat-*" ]
+  pull_request:
+
+jobs:
+  build:
+    name: Build userService
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build project
+        working-directory: userservice
+        run: mvn -B clean compile -DskipTests
+        env:
+          SPRING_PROFILES_ACTIVE: local
+          SPRING_DATASOURCE_DRIVER: ${{ secrets.SPRING_DATASOURCE_DRIVER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL_LOCAL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          SPRING_DATA_REDIS_HOST: ${{ secrets.SPRING_DATA_REDIS_HOST_LOCAL }}
+          SPRING_DATA_REDIS_PORT: ${{ secrets.SPRING_DATA_REDIS_PORT }}
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run tests
+        working-directory: userservice
+        run: mvn -B test
+        env:
+          SPRING_PROFILES_ACTIVE: local
+          SPRING_DATASOURCE_DRIVER: ${{ secrets.SPRING_DATASOURCE_DRIVER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL_LOCAL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          SPRING_DATA_REDIS_HOST: ${{ secrets.SPRING_DATA_REDIS_HOST_LOCAL }}
+          SPRING_DATA_REDIS_PORT: ${{ secrets.SPRING_DATA_REDIS_PORT }}
+
+  sonar:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: SonarCloud Scan
+        working-directory: userservice
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPRING_PROFILES_ACTIVE: local
+          SPRING_DATASOURCE_DRIVER: ${{ secrets.SPRING_DATASOURCE_DRIVER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL_LOCAL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          SPRING_DATA_REDIS_HOST: ${{ secrets.SPRING_DATA_REDIS_HOST_LOCAL }}
+          SPRING_DATA_REDIS_PORT: ${{ secrets.SPRING_DATA_REDIS_PORT }}
+        run: |
+          mvn -B verify sonar:sonar \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+
+  docker:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: sonar
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build JAR file
+        working-directory: userservice
+        run: mvn -B clean package -DskipTests
+        env:
+          SPRING_PROFILES_ACTIVE: docker
+          SPRING_DATASOURCE_DRIVER: ${{ secrets.SPRING_DATASOURCE_DRIVER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL_DOCKER }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          SPRING_DATA_REDIS_HOST: ${{ secrets.SPRING_DATA_REDIS_HOST_DOCKER }}
+          SPRING_DATA_REDIS_PORT: ${{ secrets.SPRING_DATA_REDIS_PORT }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image
+        working-directory: userservice
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/userservice:${{ github.sha }} \
+            --build-arg SPRING_PROFILES_ACTIVE=docker \
+            --build-arg SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL_DOCKER }} \
+            --build-arg SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
+            --build-arg SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
+            --build-arg SPRING_DATA_REDIS_HOST=${{ secrets.SPRING_DATA_REDIS_HOST_DOCKER }} \
+            --build-arg SPRING_DATA_REDIS_PORT=${{ secrets.SPRING_DATA_REDIS_PORT }} \
+            --build-arg SERVER_PORT=${{ secrets.SERVER_PORT }} .
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/userservice:${{ github.sha }}
+          docker tag ${{ secrets.DOCKER_USERNAME }}/userservice:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/userservice:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/userservice:latest
