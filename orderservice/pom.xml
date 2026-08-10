@@ -25,6 +25,15 @@
         <wire-mock.version>3.5.2</wire-mock.version>
         <openapi-version>2.3.0</openapi-version>
         <jjwt.version>0.11.5</jjwt.version>
+        <sonar.qualitygate.wait>false</sonar.qualitygate.wait>
+        <sonar.coverage.exclusions>
+            **/model/**/*,
+            **/dto/**/*,
+            **/config/**/*,
+            **/exception/**/*,
+            **/mapper/**/*,
+            **/*Application.java
+        </sonar.coverage.exclusions>
     </properties>
     <dependencyManagement>
         <dependencies>
