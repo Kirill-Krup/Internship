@@ -33,4 +33,6 @@ public interface CardInfoDao {
   void activateById(Long id);
 
   void deactivateById(Long id);
+
+  boolean existsByIdAndUserId(Long cardId, Long userId);
 }

@@ -33,4 +33,6 @@ public interface CardInfoRepository extends JpaRepository<CardInfo, Long>,
   @Modifying(clearAutomatically = true)
   @Query("UPDATE CardInfo c SET c.active = false WHERE c.id = :id")
   void deactivateById(@Param("id") Long id);
+
+  boolean existsByIdAndUserId(Long cardId, Long userId);
 }

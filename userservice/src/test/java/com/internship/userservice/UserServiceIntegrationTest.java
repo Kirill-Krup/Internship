@@ -19,6 +19,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -31,7 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
+@WithMockUser(username = "admin", roles = "ADMIN")
 @Testcontainers
 class UserServiceIntegrationTest {
 
@@ -54,6 +56,19 @@ class UserServiceIntegrationTest {
         registry.add("spring.data.redis.host", redis::getHost);
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
         registry.add("spring.profiles.active", () -> "local");
+
+        registry.add("jwt.secret", () -> {
+            String value = System.getenv("JWT_SECRET");
+            if (value == null || value.isBlank()) {
+                throw new IllegalStateException("JWT_SECRET env var is not set for tests");
+            }
+            return value;
+        });
+
+        registry.add("jwt.expiration", () -> {
+            String value = System.getenv("JWT_EXPIRATION");
+            return value != null && !value.isBlank() ? value : "3600000";
+        });
     }
 
     @Autowired

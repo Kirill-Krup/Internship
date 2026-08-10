@@ -69,7 +69,6 @@ public class CardInfoDaoImpl implements CardInfoDao {
   public void deleteById(Long id) {
     cardInfoRepository.deleteById(id);
   }
-
   @Override
   public void activateById(Long id) {
     cardInfoRepository.activateById(id);
@@ -78,5 +77,10 @@ public class CardInfoDaoImpl implements CardInfoDao {
   @Override
   public void deactivateById(Long id) {
     cardInfoRepository.deactivateById(id);
+  }
+
+  @Override
+  public boolean existsByIdAndUserId(Long cardId, Long userId) {
+    return cardInfoRepository.existsByIdAndUserId(cardId, userId);
   }
 }
