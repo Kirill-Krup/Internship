@@ -37,7 +37,7 @@ public class OrderServiceImpl implements OrderService {
   private final OrderDao orderDao;
   private final ItemRepository itemRepository;
   private final OrderMapper mapper;
-  private UserServiceClient userServiceClient;
+  private final UserServiceClient userServiceClient;
 
   @Override
   public OrderResponseDTO createOrder(OrderDTO orderDTO, String email) {
