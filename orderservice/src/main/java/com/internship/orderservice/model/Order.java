@@ -26,6 +26,10 @@ public class Order extends AuditableEntity {
   @Column(name = "user_id", nullable = false)
   private Long userId;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private StatusType status;
+
   @Column(name = "total_price", nullable = false)
   private BigDecimal totalPrice = BigDecimal.ZERO;
 
