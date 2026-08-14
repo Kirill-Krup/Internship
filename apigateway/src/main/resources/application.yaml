@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: apigateway
+  profiles:
+    active: local
+
+server:
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET}
+
+logging:
+  level:
+    root: INFO
+    com.internship.apigateway: DEBUG
+    org.springframework.web.server: DEBUG
+    org.springframework.web.reactive: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true

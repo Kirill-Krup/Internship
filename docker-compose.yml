@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  userdb:
+    image: postgres:16
+    container_name: userdb
+    environment:
+      POSTGRES_DB: userservice
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - user_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  authdb:
+    image: postgres:16
+    container_name: authdb
+    environment:
+      POSTGRES_DB: authservice
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  orderdb:
+    image: postgres:16
+    container_name: orderdb
+    environment:
+      POSTGRES_DB: orderservice
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - order_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  userservice:
+    build:
+      context: ./userservice
+      dockerfile: Dockerfile
+    container_name: userservice
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_DRIVER: ${SPRING_DATASOURCE_DRIVER}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT}
+      SERVER_PORT: 8081
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      userdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  authservice:
+    build:
+      context: ./authservice
+      dockerfile: Dockerfile
+    container_name: authservice
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DOCKER_DATASOURCE_AUTH_URL: ${DOCKER_DATASOURCE_AUTH_URL}
+      SPRING_DATASOURCE_AUTH_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_AUTH_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      USER_SERVICE_BASE_URL: ${USER_SERVICE_BASE_URL}
+      SERVER_PORT: 8082
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      authdb:
+        condition: service_healthy
+      userservice:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  orderservice:
+    build:
+      context: ./orderservice
+      dockerfile: Dockerfile
+    container_name: orderservice
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_ORDER_DATASOURCE_URL: ${SPRING_ORDER_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
+      USER_SERVICE_BASE_URL: ${USER_SERVICE_BASE_URL}
+      SERVER_PORT: 8083
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      orderdb:
+        condition: service_healthy
+      userservice:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  apigateway:
+    build:
+      context: ./apigateway
+      dockerfile: Dockerfile
+    container_name: apigateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - userservice
+      - authservice
+      - orderservice
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  user_postgres_data:
+  auth_postgres_data:
+  order_postgres_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge
