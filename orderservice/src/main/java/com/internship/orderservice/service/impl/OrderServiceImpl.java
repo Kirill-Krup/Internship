@@ -9,11 +9,13 @@ import com.internship.orderservice.exception.ItemNotFoundException;
 import com.internship.orderservice.exception.OrderNotFoundException;
 import com.internship.orderservice.exception.UserNotFoundException;
 import com.internship.orderservice.fallback.UserServiceClient;
+import com.internship.orderservice.mapper.OrderItemMapper;
 import com.internship.orderservice.mapper.OrderMapper;
 import com.internship.orderservice.model.Item;
 import com.internship.orderservice.model.Order;
 import com.internship.orderservice.model.OrderItem;
 import com.internship.orderservice.model.StatusType;
+import com.internship.orderservice.producer.OrderEventProducer;
 import com.internship.orderservice.repository.ItemRepository;
 import com.internship.orderservice.repository.specification.OrderSpecifications;
 import com.internship.orderservice.service.OrderService;
@@ -38,6 +40,7 @@ public class OrderServiceImpl implements OrderService {
   private final ItemRepository itemRepository;
   private final OrderMapper mapper;
   private final UserServiceClient userServiceClient;
+  private final OrderEventProducer orderEventProducer;
 
   @Override
   public OrderResponseDTO createOrder(OrderDTO orderDTO, String email) {
@@ -55,7 +58,7 @@ public class OrderServiceImpl implements OrderService {
     order.setTotalPrice(totalPrice);
 
     Order savedEntity = orderDao.save(order);
-
+    orderEventProducer.sendCreateOrderEvent(mapper.toResponseDTO(savedEntity), totalPrice);
     return enrichWithUser(mapper.toResponseDTO(savedEntity), user);
   }
 
@@ -112,6 +115,16 @@ public class OrderServiceImpl implements OrderService {
     Order order = orderDao.findById(orderId)
         .orElseThrow(() -> new OrderNotFoundException(orderId));
     orderDao.delete(order);
+  }
+
+  @Override
+  @Transactional
+  public void updateOrderStatusFromPayment(Long orderId, StatusType status) {
+    Order order = orderDao.findById(orderId)
+            .orElseThrow(() -> new OrderNotFoundException(orderId));
+    order.setStatus(status);
+    orderDao.save(order);
+    log.info("Updated order {} status to {} from payment event", orderId, status);
   }
 
   private List<OrderItem> buildOrderItems(Order order, List<OrderItemDto> itemDtos) {

@@ -10,6 +10,7 @@ import com.internship.orderservice.fallback.UserServiceClient;
 import com.internship.orderservice.mapper.OrderMapper;
 import com.internship.orderservice.model.Order;
 import com.internship.orderservice.model.StatusType;
+import com.internship.orderservice.producer.OrderEventProducer;
 import com.internship.orderservice.repository.ItemRepository;
 import com.internship.orderservice.service.impl.OrderServiceImpl;
 import org.junit.jupiter.api.DisplayName;
@@ -50,22 +51,34 @@ class OrderServiceTest {
   @Mock
   private UserServiceClient userServiceClient;
 
+  @Mock
+  private OrderEventProducer orderEventProducer;
+
   @InjectMocks
   private OrderServiceImpl orderService;
 
+
   @Test
-  @DisplayName("Should create order with user info from email")
+  @DisplayName("Should create order with user info from email and send create-order event")
   void createOrder() {
     String email = "user@example.com";
     UserInfoDTO user = userInfo(1L, email);
-    OrderDTO inputDTO = new OrderDTO(null, null, StatusType.PENDING, Collections.emptyList());
+
+    OrderDTO inputDTO = new OrderDTO(
+            null,
+            null,
+            StatusType.PENDING,
+            Collections.emptyList()
+    );
+
     Order savedOrder = createOrderEntity(1L, StatusType.PENDING);
+
     OrderResponseDTO responseDTO = OrderResponseDTO.builder()
-        .id(1L)
-        .userId(1L)
-        .status(StatusType.PENDING)
-        .totalPrice(BigDecimal.ZERO)
-        .build();
+            .id(1L)
+            .userId(1L)
+            .status(StatusType.PENDING)
+            .totalPrice(BigDecimal.ZERO)
+            .build();
 
     when(userServiceClient.getUserByEmail(email)).thenReturn(user);
     when(mapper.toEntity(inputDTO)).thenReturn(new Order());
@@ -76,8 +89,12 @@ class OrderServiceTest {
 
     assertThat(result.getId()).isEqualTo(1L);
     assertThat(result.getUser()).isEqualTo(user);
+    assertThat(result.getStatus()).isEqualTo(StatusType.PENDING);
+    assertThat(result.getTotalPrice()).isEqualByComparingTo(BigDecimal.ZERO);
+
     verify(userServiceClient).getUserByEmail(email);
     verify(orderDao).save(any(Order.class));
+    verify(orderEventProducer).sendCreateOrderEvent(responseDTO, BigDecimal.ZERO);
   }
 
   @Test
