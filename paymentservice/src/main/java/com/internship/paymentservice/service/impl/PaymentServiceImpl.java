@@ -9,6 +9,7 @@ import com.internship.paymentservice.exception.PaymentNotFoundException;
 import com.internship.paymentservice.mapper.PaymentMapper;
 import com.internship.paymentservice.model.Payment;
 import com.internship.paymentservice.model.enums.PaymentStatus;
+import com.internship.paymentservice.producer.PaymentEventProducer;
 import com.internship.paymentservice.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ public class PaymentServiceImpl implements PaymentService {
   private final PaymentDao paymentDao;
   private final PaymentMapper paymentMapper;
   private final RandomNumberClient randomNumberClient;
+  private final PaymentEventProducer paymentEventProducer;
 
   @Override
   public PaymentDTO createPayment(PaymentCreateDTO paymentDTO) {
@@ -36,6 +38,7 @@ public class PaymentServiceImpl implements PaymentService {
     payment.setStatus(status);
     payment.setTimestamp(Instant.now());
     PaymentDTO savedPayment = paymentMapper.toDto(paymentDao.save(payment));
+    paymentEventProducer.sendCreatePaymentEvent(savedPayment);
     return savedPayment;
   }
 

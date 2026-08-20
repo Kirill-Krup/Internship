@@ -26,4 +26,6 @@ public interface OrderService {
   OrderResponseDTO updateOrder(Long id, OrderDTO order);
 
   void deleteOrder(Long orderId);
+
+  void updateOrderStatusFromPayment(Long orderId, StatusType status);
 }
