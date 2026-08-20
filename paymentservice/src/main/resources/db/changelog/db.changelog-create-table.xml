@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:mongodb="http://www.liquibase.org/xml/ns/mongodb"
+        xsi:schemaLocation="
+            http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd
+            http://www.liquibase.org/xml/ns/mongodb
+            http://www.liquibase.org/xml/ns/mongodb/liquibase-mongodb-latest.xsd">
+
+  <changeSet id="1-create-payments-collection" author="Kirill">
+    <mongodb:createCollection collectionName="payments">
+      <mongodb:options><![CDATA[
+                {
+                  "validator": {
+                    "$jsonSchema": {
+                      "bsonType": "object",
+                      "required": [
+                        "id",
+                        "order_id",
+                        "user_id",
+                        "status",
+                        "timestamp",
+                        "payment_amount"
+                      ],
+                      "properties": {
+                        "id": {
+                          "bsonType": "string",
+                          "description": "Payment identifier is required"
+                        },
+                        "order_id": {
+                          "bsonType": "string",
+                          "description": "Order identifier is required"
+                        },
+                        "user_id": {
+                          "bsonType": "string",
+                          "description": "User identifier is required"
+                        },
+                        "status": {
+                          "bsonType": "string",
+                          "description": "Payment status is required"
+                        },
+                        "timestamp": {
+                          "bsonType": "date",
+                          "description": "Payment timestamp is required"
+                        },
+                        "payment_amount": {
+                          "bsonType": "decimal",
+                          "minimum": 0,
+                          "description": "Payment amount must be non-negative"
+                        }
+                      }
+                    }
+                  },
+                  "validationLevel": "strict",
+                  "validationAction": "error"
+                }
+            ]]></mongodb:options>
+    </mongodb:createCollection>
+  </changeSet>
+
+  <changeSet id="2-create-id-index" author="Kirill">
+    <mongodb:createIndex collectionName="payments">
+      <mongodb:keys><![CDATA[
+                { "id": 1 }
+            ]]></mongodb:keys>
+      <mongodb:options><![CDATA[
+                { "name": "idx_payment_id", "unique": true }
+            ]]></mongodb:options>
+    </mongodb:createIndex>
+  </changeSet>
+
+  <changeSet id="3-create-order-user-index" author="Kirill">
+    <mongodb:createIndex collectionName="payments">
+      <mongodb:keys><![CDATA[
+                { "order_id": 1, "user_id": 1 }
+            ]]></mongodb:keys>
+      <mongodb:options><![CDATA[
+                { "name": "idx_order_user" }
+            ]]></mongodb:options>
+    </mongodb:createIndex>
+  </changeSet>
+
+  <changeSet id="4-create-status-index" author="Kirill">
+    <mongodb:createIndex collectionName="payments">
+      <mongodb:keys><![CDATA[
+                { "status": 1 }
+            ]]></mongodb:keys>
+      <mongodb:options><![CDATA[
+                { "name": "idx_status" }
+            ]]></mongodb:options>
+    </mongodb:createIndex>
+  </changeSet>
+
+  <changeSet id="5-create-timestamp-index" author="Kirill">
+    <mongodb:createIndex collectionName="payments">
+      <mongodb:keys><![CDATA[
+                { "timestamp": 1 }
+            ]]></mongodb:keys>
+      <mongodb:options><![CDATA[
+                { "name": "idx_timestamp" }
+            ]]></mongodb:options>
+    </mongodb:createIndex>
+  </changeSet>
+
+</databaseChangeLog>
