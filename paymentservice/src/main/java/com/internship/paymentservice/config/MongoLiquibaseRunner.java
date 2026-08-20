@@ -7,7 +7,6 @@ import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,11 +14,13 @@ import org.springframework.context.annotation.Configuration;
 public class MongoLiquibaseRunner {
 
     @Bean
-    ApplicationRunner runMongoLiquibase(
+    public Object runMongoLiquibase(
             @Value("${spring.data.mongodb.uri}") String mongoUri
     ) {
-        return args -> {
-            Database database = DatabaseFactory.getInstance().openDatabase(
+        Database database = null;
+
+        try {
+            database = DatabaseFactory.getInstance().openDatabase(
                     mongoUri,
                     null,
                     null,
@@ -27,15 +28,25 @@ public class MongoLiquibaseRunner {
                     new ClassLoaderResourceAccessor()
             );
 
-            try (database;
-                 Liquibase liquibase = new Liquibase(
-                         "db/changelog/db.changelog-master.xml",
-                         new ClassLoaderResourceAccessor(),
-                         database
-                 )) {
+            Liquibase liquibase = new Liquibase(
+                    "db/changelog/db.changelog-master.xml",
+                    new ClassLoaderResourceAccessor(),
+                    database
+            );
 
-                liquibase.update(new Contexts(), new LabelExpression());
+            liquibase.update(new Contexts(), new LabelExpression());
+
+            return new Object();
+        } catch (Exception exception) {
+            if (database != null) {
+                try {
+                    database.close();
+                } catch (Exception closeException) {
+                    exception.addSuppressed(closeException);
+                }
             }
-        };
+
+            throw new IllegalStateException("Failed to run MongoDB Liquibase migrations", exception);
+        }
     }
 }

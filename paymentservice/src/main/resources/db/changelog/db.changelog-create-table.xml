@@ -12,66 +12,50 @@
   <changeSet id="1-create-payments-collection" author="Kirill">
     <mongodb:createCollection collectionName="payments">
       <mongodb:options><![CDATA[
-                {
-                  "validator": {
-                    "$jsonSchema": {
-                      "bsonType": "object",
-                      "required": [
-                        "id",
-                        "order_id",
-                        "user_id",
-                        "status",
-                        "timestamp",
-                        "payment_amount"
-                      ],
-                      "properties": {
-                        "id": {
-                          "bsonType": "string",
-                          "description": "Payment identifier is required"
-                        },
-                        "order_id": {
-                          "bsonType": "string",
-                          "description": "Order identifier is required"
-                        },
-                        "user_id": {
-                          "bsonType": "string",
-                          "description": "User identifier is required"
-                        },
-                        "status": {
-                          "bsonType": "string",
-                          "description": "Payment status is required"
-                        },
-                        "timestamp": {
-                          "bsonType": "date",
-                          "description": "Payment timestamp is required"
-                        },
-                        "payment_amount": {
-                          "bsonType": "decimal",
-                          "minimum": 0,
-                          "description": "Payment amount must be non-negative"
-                        }
-                      }
-                    }
-                  },
-                  "validationLevel": "strict",
-                  "validationAction": "error"
+        {
+          "validator": {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "required": [
+                "order_id",
+                "user_id",
+                "status",
+                "timestamp",
+                "payment_amount"
+              ],
+              "properties": {
+                "order_id": {
+                  "bsonType": "long",
+                  "description": "Order identifier is required"
+                },
+                "user_id": {
+                  "bsonType": "long",
+                  "description": "User identifier is required"
+                },
+                "status": {
+                  "bsonType": "string",
+                  "description": "Payment status is required"
+                },
+                "timestamp": {
+                  "bsonType": "date",
+                  "description": "Payment timestamp is required"
+                },
+                "payment_amount": {
+                  "bsonType": "decimal",
+                  "minimum": 0,
+                  "description": "Payment amount must be non-negative"
                 }
-            ]]></mongodb:options>
+              }
+            }
+          },
+          "validationLevel": "strict",
+          "validationAction": "error"
+        }
+        ]]></mongodb:options>
     </mongodb:createCollection>
   </changeSet>
 
-  <changeSet id="2-create-id-index" author="Kirill">
-    <mongodb:createIndex collectionName="payments">
-      <mongodb:keys><![CDATA[
-                { "id": 1 }
-            ]]></mongodb:keys>
-      <mongodb:options><![CDATA[
-                { "name": "idx_payment_id", "unique": true }
-            ]]></mongodb:options>
-    </mongodb:createIndex>
-  </changeSet>
-
-  <changeSet id="3-create-order-user-index" author="Kirill">
+  <changeSet id="2-create-order-user-index" author="Kirill">
     <mongodb:createIndex collectionName="payments">
       <mongodb:keys><![CDATA[
                 { "order_id": 1, "user_id": 1 }
@@ -82,7 +66,7 @@
     </mongodb:createIndex>
   </changeSet>
 
-  <changeSet id="4-create-status-index" author="Kirill">
+  <changeSet id="3-create-status-index" author="Kirill">
     <mongodb:createIndex collectionName="payments">
       <mongodb:keys><![CDATA[
                 { "status": 1 }
@@ -93,7 +77,7 @@
     </mongodb:createIndex>
   </changeSet>
 
-  <changeSet id="5-create-timestamp-index" author="Kirill">
+  <changeSet id="4-create-timestamp-index" author="Kirill">
     <mongodb:createIndex collectionName="payments">
       <mongodb:keys><![CDATA[
                 { "timestamp": 1 }
