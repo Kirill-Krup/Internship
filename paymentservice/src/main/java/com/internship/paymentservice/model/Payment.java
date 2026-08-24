@@ -24,18 +24,14 @@ public class Payment {
   @Id
   private String id;
 
-  @Indexed
   @Field("order_id")
   private Long orderId;
 
-  @Indexed
   @Field("user_id")
   private Long userId;
 
-  @Indexed
   private PaymentStatus status;
 
-  @Indexed
   private Instant timestamp;
 
   @Field(value = "payment_amount", targetType = FieldType.DECIMAL128)
