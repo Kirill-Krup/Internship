@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: internship
+
+labels:
+  - pairs:
+      project: internship-lab
+    includeSelectors: false
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - userdb.yaml
+  - authdb.yaml
+  - orderdb.yaml
+  - mongodb.yaml
+  - redis.yaml
+  - kafka.yaml
+  - userservice.yaml
+  - authservice.yaml
+  - orderservice.yaml
+  - paymentservice.yaml
+  - apigateway.yaml
+  - ingress.yaml
